@@ -8,4 +8,72 @@
     android:background="@color/bg_primary"
     tools:context=".MainActivity">
 
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+        
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+
+            <!--Header-->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_centerVertical="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ScamShield"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AI Powered Scam Detection"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"/>
+                    
+                </LinearLayout>
+                
+                <ImageView
+                    android:id="@+id/ivsettings"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_settings"
+                    android:padding="8dp"
+                    android:background="@drawable/bg_icon_button"
+                    android:contentDescription="Settings"
+                    app:tint="@color/text_secondary"/>
+            </RelativeLayout>
+
+            <!--API status-->
+            <TextView
+                android:id="@+id/tvApiKeyStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✓ API Key Saved"
+                android:textColor="@color/accent_green"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone"/>
+        </LinearLayout>
+        
+    </androidx.core.widget.NestedScrollView>
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
