@@ -72,6 +72,165 @@
                 android:textColor="@color/accent_green"
                 android:layout_marginBottom="4dp"
                 android:visibility="gone"/>
+
+            <!--API Key status-->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/layoutApiKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="@color/card_bg"
+                app:cardElevation="0dp">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔑 Anthropic API Key"
+                        android:textColor="@color/text_primary"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="4dp"/>
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Get your key from console.anthropic.com"
+                        android:textColor="@color/text_primary"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="4dp"/>
+                    
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="sk-ant-..."
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxStrokeColor="@color/accent_blue"
+                        app:hintTextColor="@color/text_primary">
+
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etApiKey"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    
+                    <Button
+                        android:id="@+id/btnSaveKey"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="Save Key"
+                        android:textColor="@color/white"
+                        android:background="@drawable/bg_button_primary"
+                        style="@style/Widget.AppCompat.Button.Borderless"/>
+
+                    
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!--Upload Card-->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="20dp"
+                app:cardBackgroundColor="@color/card_bg"
+                app:cardElevation="0dp">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Screenshot"
+                        android:textColor="@color/text_primary"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:layout_marginBottom="12sp"/>
+
+
+                    <!--Upload hint (shown when no image)-->
+                    <LinearLayout
+                        android:id="@+id/layoutUploadHint"
+                        android:layout_width="match_parent"
+                        android:layout_height="180dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@drawable/bg_upload_area">
+                        
+                        <ImageView
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_upload"
+                            android:tint="@color/text_secondary"
+                            android:contentDescription="Upload"/>
+                        
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Tap to select screenshot"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:layout_marginTop="4dp"/>
+                        
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="JPG, NPG supported"
+                            android:textColor="@color/text_hint"
+                            android:textSize="12sp"
+                            android:layout_marginTop="4dp"/>
+
+                    </LinearLayout>
+
+                    <!--Image preview (shown after selection)-->
+                    <FrameLayout
+                        android:id="@+id/layoutImagePreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        >
+
+                        <ImageView
+                            android:id="@+id/ivPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="240dp"
+                            android:scaleType="centerCrop"
+                            android:background="@drawable/bg_image_preview"
+                            android:contentDescription="selectedScreenshot"/>
+                        
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="TAP TO CHANGE"
+                            android:textSize="10sp"
+                            android:textColor="@color/white"
+                            android:background="@drawable/bg_change_label"
+                            android:padding="6dp"
+                            android:layout_gravity="bottom|end"
+                            android:layout_margin="8dp"/>
+                    </FrameLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
         </LinearLayout>
         
     </androidx.core.widget.NestedScrollView>
