@@ -10,4 +10,5 @@ import kotlinx.coroutines.launch
 
 class ScamDetectorViewModel : ViewModel() {
 
+
 }
