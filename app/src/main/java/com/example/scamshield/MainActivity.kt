@@ -288,7 +288,47 @@ fun AnalyzeButton(onClick: () -> Unit) {
 
 @Composable
 fun ResultCard(riskLevel: String, verdict: String, confidence: String, explanation: String, redFlags: String) {
+    val (bgColor, textColor, iconRes) = when (riskLevel) {
+        "HIGH" -> Triple(RiskingHighBg, RiskingHighText, R.drawable.ic_danger)
+        "MEDIUM" -> Triple (RiskingMediumBg, RiskingMediumText, R.drawable.ic_warning)
+        else -> Triple(RiskingLowBg, RiskingLowText, R.drawable.ic_safe)
+    }
 
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor =  bgColor),
+        elevation = CardDefaults.cardElevation(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = "Risk",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(40.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(verdict, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = textColor)
+                    Text("Confience: $confidence", fontSize = 13.sp, color = textColor.copy(alpha = 0.7f)
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = Divider)
+                Spacer(Modifier.height(12.dp))
+                Text("Analysis", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                Spacer(Modifier.height(12.dp))
+                Text(explanation, fontSize = 14.sp, color = TextPrimary, lineHeight = 20.sp)
+                if(redFlags.isNotEmpty()){
+                    Spacer(Modifier.height(12.dp))
+                    Text("🚩 Red Flags", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                    Spacer(Modifier.height(4.dp))
+                    Text(redFlags, fontSize = 14.sp, color = TextPrimary, lineHeight = 22.sp)
+                }
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFF0D0F14)
