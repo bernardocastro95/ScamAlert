@@ -29,13 +29,34 @@ class ScamDetectorViewModel : ViewModel(){
         _analysisState.value = AnalysisState.Idle
     }
 
+    fun analyze(context: Context){
+        val uri = _imageUri.value ?: return
+        if(apiKey.isBlank()) {
+            _analysisState.value = AnalysisState.Error("Enter your API Key in ⚙ settings first")
+            return
+        }
+        viewModelScope.launch {
+            _analysisState.value = AnalysisState.Loading
+            try {
+                val result = repository.analyzeScreenshot(context, uri, apiKey)
+                _analysisState.value = AnalysisState.Success(result)
+            }
+            catch (e: Exception){
+                _analysisState.value = AnalysisState.Error(e.message?: "Unknown Error")
+            }
+        }
+    }
 
+    fun reset(){
+        _imageUri.value = null
+        _analysisState.value = AnalysisState.Idle
+    }
 
 }
 
 sealed class AnalysisState {
     object Idle : AnalysisState()
     object Loading : AnalysisState()
-    data class Success(val result: ScamAnalysisResult): AnalysisState()
-    data class Error(val result: ScamAnalysisResult): AnalysisState()
+    data class Success(val result: ScamAnalysisResult) : AnalysisState()
+    data class Error(val message: String) : AnalysisState()
 }
