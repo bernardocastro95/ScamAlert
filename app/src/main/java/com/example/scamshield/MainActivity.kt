@@ -83,18 +83,7 @@ fun ScamShieldScreen(viewModel: ScamDetectorViewModel = viewModel()) {
     ) { granted -> if (granted) imagePicker.launch("image/*") }
 
     fun pickImage() {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            Manifest.permission.READ_MEDIA_IMAGES
-        else
-            Manifest.permission.READ_EXTERNAL_STORAGE
-
-        if (ContextCompat.checkSelfPermission(context, permission)
-            == PackageManager.PERMISSION_GRANTED
-        ) {
-            imagePicker.launch("image/*")
-        } else {
-            permissionLauncher.launch(permission)
-        }
+        imagePicker.launch("image/*")
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = BgPrimary) {
