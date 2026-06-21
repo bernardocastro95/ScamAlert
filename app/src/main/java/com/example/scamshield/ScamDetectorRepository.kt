@@ -4,19 +4,17 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import coil.size.Size
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.ResponseBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
-import java.io.OutputStream
 import java.util.Base64
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 
 class ScamDetectorRepository {
@@ -57,7 +55,7 @@ class ScamDetectorRepository {
     suspend fun analyzeScreenshot(context: Context, uri: Uri, apiKey: String): ScamAnalysisResult {
         return withContext(Dispatchers.IO){
             val base64Image = encodeImageToBase64(context, uri)
-            val response = callClaudeAPI(apiKey, base64Image)
+            val response = callGeminiAPI(apiKey, base64Image)
             parseResponse(response)
         }
     }
@@ -91,68 +89,82 @@ class ScamDetectorRepository {
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
-    private fun callClaudeAPI(apiKey: String, base64Image: String): String {
-        val imageContent = JSONObject().apply {
-            put("type", "image")
-            put("source", JSONObject().apply {
-                put("type", "base64")
-                put("media_type", "image/jpeg")
-                put("data", "base64Image")
+    private fun callGeminiAPI(apiKey: String, base64Image: String): String {
+        val textPart = JSONObject().apply {
+            put("text", systemPrompt + "Analyze this screenshot for scam or fraud indications. Return ONLY the JSON object")
+        }
+
+        val imagePart = JSONObject().apply {
+            put("inline_data", JSONObject().apply {
+                put("mime_type", "image/jpeg")
+                put("data", base64Image)
             })
         }
 
-        val textContent = JSONObject().apply {
-            put("type", "text")
-            put("text", "Analyze this screenshot for scam or fraud indicators. Return ONLY the JSON object as instructed.")
+        val parts = JSONArray().apply {
+            put(textPart)
+            put(imagePart)
         }
 
-        val messageContent = JSONArray().apply {
-            put(imageContent)
-            put(textContent)
+        val contents = JSONArray().apply {
+            put(JSONObject().apply {
+                put("parts", parts)
+            })
         }
 
-        val message = JSONObject().apply {
-            put("role", "user")
-            put("content", messageContent)
+        val generationConfig = JSONObject().apply {
+            put("temperature", 0.1)
+            put("maxOutputTokens", 1024)
         }
 
         val requestBody = JSONObject().apply {
-            put("mode", "claude-opus-4-5")
-            put("max_tokens", 1024)
-            put("system", systemPrompt)
-            put("message", JSONArray().put(message))
+            put("contents", contents)
+            put("generationConfig", generationConfig)
         }
 
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey"
+
         val request = Request.Builder()
-            .url("https://api.anthropic.com/v1/messages")
-            .addHeader("x-api-key", apiKey)
-            .addHeader("anthropic-version", "2023-06-01")
-            .addHeader("content-type", "application/json")
+            .url(url)
+            .addHeader("Content-Type", "application/json")
             .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
         val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw Exception("Empty response from API")
+        val body = response.body?.toString() ?: throw Exception("Empty response from API")
 
-        if(!response.isSuccessful){
-            val errorJson = runCatching { JSONObject(body) }.getOrNull()
-            val errorMsg = errorJson?.optJSONObject("error")?.optString("message")
-                ?: "API Error ($response.code})"
+        android.util.Log.e("ScamShield", "Response code: ${response.code}")
+        android.util.Log.e("ScamShield", "Response body: $body")
+
+        if(!response.isSuccessful) {
+            val errorJson = runCatching {
+                JSONObject(body)
+            }.getOrNull()
+            val errorMsg = errorJson
+                ?.optJSONArray("error")
+                ?.let { null }
+                ?: errorJson?.optJSONObject("error")?.optString("message")
+                ?: "API Error (${response.code})"
             throw Exception(errorMsg)
         }
+
 
         return body
     }
 
     private fun parseResponse(responseBody: String): ScamAnalysisResult {
         val responseJson = JSONObject(responseBody)
-        val content = responseJson
-            .getJSONArray("content")
+
+        val text = responseJson
+            .getJSONArray("candidates")
+            .getJSONObject(0)
+            .getJSONObject("content")
+            .getJSONArray("parts")
             .getJSONObject(0)
             .getString("text")
             .trim()
 
-        val jsonText = content
+        val jsonText = text
             .removePrefix("```json")
             .removePrefix("```")
             .removePrefix("```")
