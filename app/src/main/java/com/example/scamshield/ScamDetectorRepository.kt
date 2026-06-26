@@ -57,7 +57,7 @@ class ScamDetectorRepository {
     suspend fun analyzeScreenshot(context: Context, uri: Uri, apiKey: String): ScamAnalysisResult {
         return withContext(Dispatchers.IO){
             val base64Image = encodeImageToBase64(context, uri)
-            val response = callGeminiAPI(apiKey, base64Image)
+            val response = callOpenRouterAPI(apiKey, base64Image)
             parseResponse(response)
         }
     }
@@ -91,55 +91,58 @@ class ScamDetectorRepository {
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
-    private fun callGeminiAPI(apiKey: String, base64Image: String): String {
-        val textPart = JSONObject().apply {
-            put("text", systemPrompt + "\n\nAnalyze this screenshot for scam or fraud indicators. Return ONLY the JSON object.")
-        }
-
-        val imagePart = JSONObject().apply {
-            put("inline_data", JSONObject().apply {
-                put("mime_type", "image/jpeg")
-                put("data", base64Image)
+    private fun callOpenRouterAPI(apiKey: String, base64Image: String): String {
+        val imageContent = JSONObject().apply {
+            put("type", "image_url")
+            put ("image_rul", JSONObject().apply {
+                put("url", "data:image/jpeg;base64,\$base64Image")
             })
         }
 
-        val parts = JSONArray().apply {
-            put(textPart)
-            put(imagePart)
+        val textContent = JSONObject().apply {
+            put("type", "text")
+            put("text", "Analyze this screenshot for scam or fraud indicators. Return ONLY the JSON object as instructed.")
         }
 
-
-        val contents = JSONArray().apply {
-            put(JSONObject().apply {
-                put("parts", parts)
+        val userMessage = JSONObject().apply {
+            put("role", "user")
+            put("content", JSONArray().apply {
+                put(imageContent)
+                put(textContent)
             })
         }
 
-        val generationConfig = JSONObject().apply {
-            put("temperature", 0.1)
-            put("maxOutputTokens", 1024)
+        val systemMessages = JSONObject().apply {
+            put("role", "system")
+            put("content", systemPrompt)
         }
 
         val requestBody = JSONObject().apply {
-            put("contents", contents)
-            put("generationConfig", generationConfig)
+            put("model", "meta-llama/llama-3.2-11b-vision-instruct")
+            put("messages", JSONArray().apply {
+                put(systemMessages)
+                put(userMessage)
+            })
+            put("max_tokens", 1024)
+            put("temperature", 0.1)
         }
 
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=$apiKey"
-
         val request = Request.Builder()
-            .url(url)
+            .url("https://openrouter.ai/api/v1/chat/completions")
+            .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Content-Type", "application/json")
+            .addHeader("HTTP-Referer", "com.example.scamshield")
+            .addHeader("X-Title", "ScamShield")
             .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
         val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw Exception("Empty response from API") // ✅ .string() not .toString()
+        val body = response.body?.string() ?: throw Exception("Empty response from API")
 
-        android.util.Log.e("ScamShield", "Response code: ${response.code}")
-        android.util.Log.e("ScamShield", "Response body: $body")
+        android.util.Log.d("ScamShield", "Response code: ${response.code}")
+        android.util.Log.d("ScamShield", "Response body: ${body}")
 
-        if (!response.isSuccessful) {
+        if(!response.isSuccessful){
             val errorJson = runCatching { JSONObject(body) }.getOrNull()
             val errorMsg = errorJson
                 ?.optJSONObject("error")
@@ -147,42 +150,48 @@ class ScamDetectorRepository {
                 ?: "API Error (${response.code})"
             throw Exception(errorMsg)
         }
-
         return body
     }
 
     private fun parseResponse(responseBody: String): ScamAnalysisResult {
         val responseJson = JSONObject(responseBody)
-        val content = responseJson
-            .getJSONArray("content")
+
+        // OpenRouter uses OpenAI format:
+        // choices[0].message.content
+        val text = responseJson
+            .getJSONArray("choices")
             .getJSONObject(0)
-            .getString("text")
+            .getJSONObject("message")
+            .getString("content")
             .trim()
 
-        val jsonText = content
+        android.util.Log.d("ScamShield", "AI response text: $text")
+
+        // Strip markdown code blocks if present
+        val jsonText = text
             .removePrefix("```json")
             .removePrefix("```")
-            .removePrefix("```")
+            .removeSuffix("```")
             .trim()
 
         val result = JSONObject(jsonText)
 
         val isScam = result.optBoolean("isScam", false)
-        val riskLevelStr = result.optString("riskLevel", "LOW").uppercase()
-        val riskLevel = when (riskLevelStr){
-            "HIGH" -> RiskLevel.HIGH
+        val riskLevel = when (result.optString("riskLevel", "LOW").uppercase()) {
+            "HIGH"   -> RiskLevel.HIGH
             "MEDIUM" -> RiskLevel.MEDIUM
-            else -> RiskLevel.LOW
+            else     -> RiskLevel.LOW
         }
 
         return ScamAnalysisResult(
-            isScam = isScam,
-            riskLevel = riskLevel,
-            verdict = result.optString("verdict", if(isScam) "⚠ Scam Detected" else "✓ Appears Safe"),
-            confidence = result.optString("confidence", "N/A"),
-            explanation = result.optString("explanation", "No explanation provided"),
-            redFlags = result.optString("redFlags", "")
+            isScam      = isScam,
+            riskLevel   = riskLevel,
+            verdict     = result.optString("verdict", if (isScam) "⚠ Scam Detected" else "✓ Appears Safe"),
+            confidence  = result.optString("confidence", "N/A"),
+            explanation = result.optString("explanation", "No explanation provided."),
+            redFlags    = result.optString("redFlags", "")
         )
+
     }
 
 }
