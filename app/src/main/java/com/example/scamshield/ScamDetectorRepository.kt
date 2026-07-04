@@ -57,7 +57,7 @@ class ScamDetectorRepository {
     suspend fun analyzeScreenshot(context: Context, uri: Uri, apiKey: String): ScamAnalysisResult {
         return withContext(Dispatchers.IO){
             val base64Image = encodeImageToBase64(context, uri)
-            val response = callOpenRouterAPI(apiKey, base64Image)
+            val response = callGroqAPI(apiKey, base64Image)
             parseResponse(response)
         }
     }
@@ -91,11 +91,11 @@ class ScamDetectorRepository {
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
-    private fun callOpenRouterAPI(apiKey: String, base64Image: String): String {
+    private fun callGroqAPI(apiKey: String, base64Image: String): String {
         val imageContent = JSONObject().apply {
             put("type", "image_url")
-            put ("image_rul", JSONObject().apply {
-                put("url", "data:image/jpeg;base64,\$base64Image")
+            put("image_url", JSONObject().apply {
+                put("url", "data:image/jpeg;base64,$base64Image")
             })
         }
 
@@ -112,15 +112,15 @@ class ScamDetectorRepository {
             })
         }
 
-        val systemMessages = JSONObject().apply {
+        val systemMessage = JSONObject().apply {
             put("role", "system")
             put("content", systemPrompt)
         }
 
         val requestBody = JSONObject().apply {
-            put("model", "meta-llama/llama-3.2-11b-vision-instruct")
+            put("model", "meta-llama/llama-4-scout-17b-16e-instruct")
             put("messages", JSONArray().apply {
-                put(systemMessages)
+                put(systemMessage)
                 put(userMessage)
             })
             put("max_tokens", 1024)
@@ -128,11 +128,9 @@ class ScamDetectorRepository {
         }
 
         val request = Request.Builder()
-            .url("https://openrouter.ai/api/v1/chat/completions")
+            .url("https://api.groq.com/openai/v1/chat/completions")
             .addHeader("Authorization", "Bearer $apiKey")
             .addHeader("Content-Type", "application/json")
-            .addHeader("HTTP-Referer", "com.example.scamshield")
-            .addHeader("X-Title", "ScamShield")
             .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
@@ -140,9 +138,9 @@ class ScamDetectorRepository {
         val body = response.body?.string() ?: throw Exception("Empty response from API")
 
         android.util.Log.d("ScamShield", "Response code: ${response.code}")
-        android.util.Log.d("ScamShield", "Response body: ${body}")
+        android.util.Log.d("ScamShield", "Response body: $body")
 
-        if(!response.isSuccessful){
+        if (!response.isSuccessful) {
             val errorJson = runCatching { JSONObject(body) }.getOrNull()
             val errorMsg = errorJson
                 ?.optJSONObject("error")
@@ -150,14 +148,14 @@ class ScamDetectorRepository {
                 ?: "API Error (${response.code})"
             throw Exception(errorMsg)
         }
+
         return body
     }
 
     private fun parseResponse(responseBody: String): ScamAnalysisResult {
         val responseJson = JSONObject(responseBody)
 
-        // OpenRouter uses OpenAI format:
-        // choices[0].message.content
+
         val text = responseJson
             .getJSONArray("choices")
             .getJSONObject(0)
@@ -167,7 +165,7 @@ class ScamDetectorRepository {
 
         android.util.Log.d("ScamShield", "AI response text: $text")
 
-        // Strip markdown code blocks if present
+
         val jsonText = text
             .removePrefix("```json")
             .removePrefix("```")
