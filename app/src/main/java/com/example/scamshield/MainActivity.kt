@@ -119,11 +119,11 @@ fun ScamShieldScreen(viewModel: ScamDetectorViewModel = viewModel()) {
     val context      = LocalContext.current
     val imageUri     by viewModel.imageUri.collectAsStateWithLifecycle()
     val state        by viewModel.analysisState.collectAsStateWithLifecycle()
-    val language     by viewModel.language.collectAsStateWithLifecycle()  // ← add this
+    val language     by viewModel.language.collectAsStateWithLifecycle()
     var showApiKey   by remember { mutableStateOf(false) }
     var savedKey     by remember { mutableStateOf("") }
 
-    val s = { key: String -> uiString(language, key) }  // shorthand
+    val s = { key: String -> uiString(language, key) }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -294,7 +294,7 @@ fun SettingsCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // API Key section
+
             Text(strings("api_key_title"), fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
             Spacer(Modifier.height(4.dp))
             Text(strings("api_key_subtitle"), color = TextSecondary, fontSize = 12.sp)
@@ -326,12 +326,12 @@ fun SettingsCard(
 
             Spacer(Modifier.height(16.dp))
 
-            // Divider
+
             HorizontalDivider(color = Divider)
 
             Spacer(Modifier.height(16.dp))
 
-            // Language section
+
             Text(strings("language_label"), fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
             Spacer(Modifier.height(12.dp))
 
