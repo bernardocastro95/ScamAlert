@@ -54,10 +54,15 @@ class ScamDetectorRepository {
 
 """.trimIndent()
 
-    suspend fun analyzeScreenshot(context: Context, uri: Uri, apiKey: String): ScamAnalysisResult {
-        return withContext(Dispatchers.IO){
+    suspend fun analyzeScreenshot(
+        context: Context,
+        uri: Uri,
+        apiKey: String,
+        language: AppLanguage
+    ): ScamAnalysisResult {
+        return withContext(Dispatchers.IO) {
             val base64Image = encodeImageToBase64(context, uri)
-            val response = callGroqAPI(apiKey, base64Image)
+            val response = callGroqAPI(apiKey, base64Image, language)
             parseResponse(response)
         }
     }
@@ -91,7 +96,12 @@ class ScamDetectorRepository {
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
-    private fun callGroqAPI(apiKey: String, base64Image: String): String {
+    private fun callGroqAPI(apiKey: String, base64Image: String, language: AppLanguage): String {
+        val languageInstruction = when (language) {
+            AppLanguage.PORTUGUESE_BR -> "\n\nIMPORTANT: Respond ONLY in Brazilian Portuguese (pt-BR). All fields in the JSON (verdict, explanation, redFlags) must be written in Brazilian Portuguese."
+            AppLanguage.ENGLISH -> "\n\nIMPORTANT: Respond in English."
+        }
+
         val imageContent = JSONObject().apply {
             put("type", "image_url")
             put("image_url", JSONObject().apply {
@@ -114,7 +124,7 @@ class ScamDetectorRepository {
 
         val systemMessage = JSONObject().apply {
             put("role", "system")
-            put("content", systemPrompt)
+            put("content", systemPrompt + languageInstruction)  // ← append language here
         }
 
         val requestBody = JSONObject().apply {
