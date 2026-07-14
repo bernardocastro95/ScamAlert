@@ -27,42 +27,35 @@ class ScamDetectorRepository {
         .build()
 
     private val systemPrompt = """
-        You are ScamShield, an expert AI security analyst specializing in detecting scam messages, 
-        phishing attempts, fraud, and social engineering attacks from screenshots.
-        
-        Analyze the provided screenshot carefully and return your analysis ONLY as a valid JSON object 
-        with exactly these fields (no other text, no markdown, no code blocks):
-        {
-            "isScam": true or false,
-            "riskLevel": "LOW" or "MEDIUM" or "HIGH",
-            "verdict": "brief verdict (max 8 words)",
-            "confidence": "e.g.94%",
-            "explanation": "2-3 sentence explanation of your analysis",
-            "redFlags": "comma-separated list of red flags found, or empty if string is none"
-        }
-               
-        Classify as HIGH risk if the message involves: urgency + financial requests, credential 
-        harvesting, impersonation of banks/government/tech companies, lottery/prize scams, 
-        romance scams requesting money, investment fraud.
-        
-        Classify as MEDIUM risk if: suspicious links, unusual requests, mildly suspicious but 
-        not conclusive.
-        
-        Classify as LOW risk if: appears to be a legitimate message, no suspicious elements.
-        
-        Always be thorough, objective, and return ONLY the raw JSON object.
-
+    Você é o ScamShield, um analista especialista em segurança digital especializado em detectar 
+    mensagens fraudulentas, tentativas de phishing, golpes e ataques de engenharia social em capturas de tela.
+    
+    Analise cuidadosamente a captura de tela fornecida e retorne sua análise APENAS como um objeto JSON válido
+    com exatamente estes campos (sem nenhum outro texto, sem markdown, sem blocos de código):
+    {
+      "isScam": true ou false,
+      "riskLevel": "LOW" ou "MEDIUM" ou "HIGH",
+      "verdict": "veredicto breve (máx. 8 palavras)",
+      "confidence": "ex: 94%",
+      "explanation": "explicação em 2-3 frases da sua análise",
+      "redFlags": "lista de sinais de alerta separados por vírgula, ou string vazia se nenhum"
+    }
+    
+    Classifique como HIGH se a mensagem envolve: urgência + solicitações financeiras, roubo de credenciais,
+    falsificação de bancos/governo/empresas de tecnologia, golpes de loteria/prêmios,
+    golpes românticos pedindo dinheiro, fraude de investimento.
+    
+    Classifique como MEDIUM se: links suspeitos, solicitações incomuns, suspeito mas não conclusivo.
+    
+    Classifique como LOW se: parece uma mensagem legítima, sem elementos suspeitos.
+    
+    Responda SEMPRE em Português do Brasil. Retorne APENAS o objeto JSON.
 """.trimIndent()
 
-    suspend fun analyzeScreenshot(
-        context: Context,
-        uri: Uri,
-        apiKey: String,
-        language: AppLanguage
-    ): ScamAnalysisResult {
+    suspend fun analyzeScreenshot(context: Context, uri: Uri, apiKey: String): ScamAnalysisResult {
         return withContext(Dispatchers.IO) {
             val base64Image = encodeImageToBase64(context, uri)
-            val response = callGroqAPI(apiKey, base64Image, language)
+            val response = callGroqAPI(apiKey, base64Image)
             parseResponse(response)
         }
     }
@@ -96,11 +89,7 @@ class ScamDetectorRepository {
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
 
-    private fun callGroqAPI(apiKey: String, base64Image: String, language: AppLanguage): String {
-        val languageInstruction = when (language) {
-            AppLanguage.PORTUGUESE_BR -> "\n\nIMPORTANT: Respond ONLY in Brazilian Portuguese (pt-BR). All fields in the JSON (verdict, explanation, redFlags) must be written in Brazilian Portuguese."
-            AppLanguage.ENGLISH -> "\n\nIMPORTANT: Respond in English."
-        }
+    private fun callGroqAPI(apiKey: String, base64Image: String): String {
 
         val imageContent = JSONObject().apply {
             put("type", "image_url")
@@ -124,7 +113,7 @@ class ScamDetectorRepository {
 
         val systemMessage = JSONObject().apply {
             put("role", "system")
-            put("content", systemPrompt + languageInstruction)  // ← append language here
+            put("content", systemPrompt)
         }
 
         val requestBody = JSONObject().apply {

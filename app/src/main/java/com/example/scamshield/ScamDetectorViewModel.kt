@@ -9,11 +9,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-enum class AppLanguage(val displayName: String, val code: String) {
-    ENGLISH("English", "en"),
-    PORTUGUESE_BR("Português (BR)", "pt-BR")
-}
-
 class ScamDetectorViewModel : ViewModel() {
 
     private val _imageUri = MutableStateFlow<Uri?>(null)
@@ -22,15 +17,10 @@ class ScamDetectorViewModel : ViewModel() {
     private val _analysisState = MutableStateFlow<AnalysisState>(AnalysisState.Idle)
     val analysisState: StateFlow<AnalysisState> = _analysisState.asStateFlow()
 
-    private val _language = MutableStateFlow(AppLanguage.ENGLISH)
-    val language: StateFlow<AppLanguage> = _language.asStateFlow()
-
     private var apiKey: String = ""
     private val repository = ScamDetectorRepository()
 
     fun setApiKey(key: String) { apiKey = key }
-
-    fun setLanguage(lang: AppLanguage) { _language.value = lang }
 
     fun setImage(uri: Uri) {
         _imageUri.value = uri
@@ -41,20 +31,17 @@ class ScamDetectorViewModel : ViewModel() {
         val uri = _imageUri.value ?: return
         if (apiKey.isBlank()) {
             _analysisState.value = AnalysisState.Error(
-                if (_language.value == AppLanguage.PORTUGUESE_BR)
-                    "Insira sua chave de API nas configurações ⚙ primeiro."
-                else
-                    "Enter your API key in ⚙ settings first."
+                "Insira sua chave de API nas configurações ⚙ primeiro."
             )
             return
         }
         viewModelScope.launch {
             _analysisState.value = AnalysisState.Loading
             try {
-                val result = repository.analyzeScreenshot(context, uri, apiKey, _language.value)
+                val result = repository.analyzeScreenshot(context, uri, apiKey)
                 _analysisState.value = AnalysisState.Success(result)
             } catch (e: Exception) {
-                _analysisState.value = AnalysisState.Error(e.message ?: "Unknown error")
+                _analysisState.value = AnalysisState.Error(e.message ?: "Erro desconhecido")
             }
         }
     }
