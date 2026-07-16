@@ -308,19 +308,21 @@ fun ScreenshotCard(imageUri: Uri?, onPickClick: () -> Unit) {
             Spacer(Modifier.height(12.dp))
 
             if (imageUri == null) {
+                // ── Entire upload area is clickable ────────────────────────────
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(180.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF12141C))
-                        .border(1.5.dp, Divider, RoundedCornerShape(16.dp)),
+                        .border(1.5.dp, Divider, RoundedCornerShape(16.dp))
+                        .clickable { onPickClick() },   // ← whole area clickable
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             painter            = painterResource(R.drawable.ic_upload),
-                            contentDescription = "Enviar",
+                            contentDescription = "Selecionar captura",
                             tint               = AccentBlue,
                             modifier           = Modifier.size(48.dp)
                         )
@@ -339,6 +341,7 @@ fun ScreenshotCard(imageUri: Uri?, onPickClick: () -> Unit) {
                     }
                 }
             } else {
+                // ── Image preview with clickable "TOQUE PARA MUDAR" badge ──────
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -351,12 +354,14 @@ fun ScreenshotCard(imageUri: Uri?, onPickClick: () -> Unit) {
                         contentScale       = ContentScale.Crop,
                         modifier           = Modifier.fillMaxSize()
                     )
+                    // ── "Toque para mudar" badge is clickable ──────────────────
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(8.dp)
                             .clip(RoundedCornerShape(6.dp))
                             .background(Color(0x99000000))
+                            .clickable { onPickClick() }   // ← badge clickable
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text("TOQUE PARA MUDAR", color = Color.White, fontSize = 10.sp)
