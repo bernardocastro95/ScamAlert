@@ -117,7 +117,7 @@ class ScamDetectorRepository {
         }
 
         val requestBody = JSONObject().apply {
-            put("model", "meta-llama/llama-4-scout-17b-16e-instruct")
+            put("model", "qwen/qwen3.6-27b")
             put("messages", JSONArray().apply {
                 put(systemMessage)
                 put(userMessage)
@@ -155,12 +155,16 @@ class ScamDetectorRepository {
         val responseJson = JSONObject(responseBody)
 
 
-        val text = responseJson
+        var text = responseJson
             .getJSONArray("choices")
             .getJSONObject(0)
             .getJSONObject("message")
             .getString("content")
             .trim()
+
+        if(text.contains("<think>")){
+            text = text.substringAfter("</think>").trim()
+        }
 
         android.util.Log.d("ScamShield", "AI response text: $text")
 
