@@ -122,7 +122,7 @@ class ScamDetectorRepository {
                 put(systemMessage)
                 put(userMessage)
             })
-            put("max_tokens", 1024)
+            put("max_tokens", 2048)
             put("temperature", 0.1)
         }
 
@@ -154,7 +154,6 @@ class ScamDetectorRepository {
     private fun parseResponse(responseBody: String): ScamAnalysisResult {
         val responseJson = JSONObject(responseBody)
 
-
         var text = responseJson
             .getJSONArray("choices")
             .getJSONObject(0)
@@ -162,20 +161,58 @@ class ScamDetectorRepository {
             .getString("content")
             .trim()
 
-        if(text.contains("<think>")){
-            text = text.substringAfter("</think>").trim()
+        android.util.Log.d("ScamShield", "Raw AI response: $text")
+
+        // Step 1: Strip <think>...</think> reasoning block
+        if (text.contains("<think>")) {
+            text = if (text.contains("</think>")) {
+                text.substringAfter("</think>").trim()
+            } else {
+                text.substringAfterLast(">").trim()
+            }
         }
 
-        android.util.Log.d("ScamShield", "AI response text: $text")
-
-
-        val jsonText = text
-            .removePrefix("```json")
-            .removePrefix("```")
-            .removeSuffix("```")
+        // Step 2: Strip markdown code blocks
+        text = text
+            .replace("```json", "")
+            .replace("```", "")
             .trim()
 
-        val result = JSONObject(jsonText)
+        // Step 3: Extract JSON by finding first { and last }
+        val jsonStart = text.indexOf("{")
+        val jsonEnd = text.lastIndexOf("}")
+
+        if (jsonStart == -1 || jsonEnd == -1 || jsonStart >= jsonEnd) {
+            android.util.Log.e("ScamShield", "No JSON found in response: $text")
+            val looksLikeScam = text.lowercase().let {
+                it.contains("golpe") || it.contains("scam") || it.contains("fraude") ||
+                        it.contains("suspeito") || it.contains("phishing") || it.contains("risco")
+            }
+            return ScamAnalysisResult(
+                isScam      = looksLikeScam,
+                riskLevel   = if (looksLikeScam) RiskLevel.HIGH else RiskLevel.LOW,
+                verdict     = if (looksLikeScam) "⚠ Possível Golpe" else "✓ Parece Seguro",
+                confidence  = "N/A",
+                explanation = "Não foi possível processar a resposta completa. Tente analisar novamente.",
+                redFlags    = ""
+            )
+        }
+
+        text = text.substring(jsonStart, jsonEnd + 1)
+        android.util.Log.d("ScamShield", "Extracted JSON: $text")
+
+        // Step 4: Parse JSON safely
+        val result = runCatching { JSONObject(text) }.getOrElse {
+            android.util.Log.e("ScamShield", "JSON parse failed: $text")
+            return ScamAnalysisResult(
+                isScam      = false,
+                riskLevel   = RiskLevel.LOW,
+                verdict     = "Erro ao processar resposta",
+                confidence  = "N/A",
+                explanation = "Não foi possível processar a resposta completa. Tente analisar novamente.",
+                redFlags    = ""
+            )
+        }
 
         val isScam = result.optBoolean("isScam", false)
         val riskLevel = when (result.optString("riskLevel", "LOW").uppercase()) {
@@ -187,12 +224,11 @@ class ScamDetectorRepository {
         return ScamAnalysisResult(
             isScam      = isScam,
             riskLevel   = riskLevel,
-            verdict     = result.optString("verdict", if (isScam) "⚠ Scam Detected" else "✓ Appears Safe"),
+            verdict     = result.optString("verdict", if (isScam) "⚠ Golpe Detectado" else "✓ Parece Seguro"),
             confidence  = result.optString("confidence", "N/A"),
-            explanation = result.optString("explanation", "No explanation provided."),
+            explanation = result.optString("explanation", "Nenhuma explicação fornecida."),
             redFlags    = result.optString("redFlags", "")
         )
-
     }
 
 }
